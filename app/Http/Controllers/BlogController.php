@@ -8,6 +8,11 @@ use App\Blog;
 
 class BlogController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth.basic.once')->only('store', 'update');
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -63,7 +68,7 @@ class BlogController extends Controller
      */
     public function show($id)
     {
-        //
+
         $blog = Blog::find($id);
 
         return response()->json([
