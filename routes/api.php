@@ -17,6 +17,9 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::apiResource('blog', 'BlogController');
+Route::prefix('v1')->group(function () {
+    Route::apiResource('blog', 'BlogController');
+    Route::post('blog/{blog}/image', 'BlogController@addImage');
+});
 
-Route::post('blog/{blog}/image', 'BlogController@addImage');
+

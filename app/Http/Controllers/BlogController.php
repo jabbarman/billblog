@@ -29,7 +29,7 @@ class BlogController extends Controller
             $response[] = [
                 "id" => $blog->id,
                 "title" => $blog->title,
-                "href" => "/api/blog/".$blog->id,
+                "href" => "/api/v1/blog/".$blog->id,
                 "method" => "GET"
             ];
         }
@@ -59,7 +59,7 @@ class BlogController extends Controller
                 "message" => "post created",
                 "id" => $blog->id,
                 "title" => $blog->title,
-                "href" => "/api/blog/".$blog->id,
+                "href" => "/api/v1/blog/".$blog->id,
                 "method" => "GET"
             ],201);
         };
@@ -83,7 +83,7 @@ class BlogController extends Controller
             "user_id" => $blog->user_id,
             "created_at" => $blog->created_at,
             "updated_at" => $blog->updated_at,
-            "href" => "/api/blog/" . $blog->id,
+            "href" => "/api/v1/blog/" . $blog->id,
             "method" => 'GET'
         ];
 
@@ -114,7 +114,7 @@ class BlogController extends Controller
                 "message" => "post edited",
                 "id" => $blog->id,
                 "title" => $blog->title,
-                "href" => "/api/blog/".$blog->id,
+                "href" => "/api/v1/blog/".$blog->id,
                 "method" => "GET"
             ],201);
         };
