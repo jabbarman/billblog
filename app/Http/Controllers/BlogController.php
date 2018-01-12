@@ -11,7 +11,7 @@ class BlogController extends Controller
     public function __construct()
     {
         // NOT WORKING Needs investigating or using OAuth2 or JWT (JJ - 2018/01/10)
-        //$this->middleware('auth.basic.once')->only('store', 'update');
+        $this->middleware('jwt.auth')->only('store', 'update', 'destroy', 'addImage');
     }
 
     /**
