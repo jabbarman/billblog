@@ -21,26 +21,23 @@ class BlogController extends Controller
      */
     public function index()
     {
-        //
         $blogs = Blog::all();
 
         $response = [];
 
         foreach($blogs as $blog) {
-            $response[$blog->id] = $blog->title;
+            $response[] = [
+                "id" => $blog->id,
+                "title" => $blog->title,
+                "href" => "/api/blog/".$blog->id,
+                "method" => "GET"
+            ];
         }
 
-        return response()->json($response);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
+        return response()->json([
+            "message" => "posts found",
+            "posts" => $response
+        ],200);
     }
 
     /**
@@ -51,14 +48,22 @@ class BlogController extends Controller
      */
     public function store(Request $request)
     {
-        //
         $blog = new Blog;
 
         $blog->user_id = 1;  // hard coded until we get authentication on stream
         $blog->title = $request->title;
         $blog->body = $request->body;
 
-        $blog->save();
+        if ($blog->save()) {
+            return response()->json([
+                "message" => "post created",
+                "id" => $blog->id,
+                "title" => $blog->title,
+                "href" => "/api/blog/".$blog->id,
+                "method" => "GET"
+            ],201);
+        };
+
     }
 
     /**
@@ -69,30 +74,25 @@ class BlogController extends Controller
      */
     public function show($id)
     {
+        $blog = Blog::findOrFail($id);
 
-        $blog = Blog::find($id);
-
-        return response()->json([
+        $post = [
             "id" => $blog->id,
             "title" => $blog->title,
             "body" => $blog->body,
             "user_id" => $blog->user_id,
             "created_at" => $blog->created_at,
-            "updated_at" => $blog->updated_at
-        ]);
+            "updated_at" => $blog->updated_at,
+            "href" => "/api/blog/" . $blog->id,
+            "method" => 'GET'
+        ];
+
+        return response()->json([
+            "message" => "post found",
+            "post" => $post
+        ],200);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
-    {
-        //
-
-    }
 
     /**
      * Update the specified resource in storage.
@@ -103,14 +103,22 @@ class BlogController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
-        $blog = Blog::find($id);
+        $blog = Blog::findOrFail($id);
 
         $blog->user_id = 1;  // hard coded until we get authentication on stream
         (!empty(trim($request->title))?$blog->title = (trim($request->title)):null);
         (!empty(trim($request->body))?$blog->body = (trim($request->body)):null);
 
-        $blog->save();
+        if ($blog->save()) {
+            return response()->json([
+                "message" => "post edited",
+                "id" => $blog->id,
+                "title" => $blog->title,
+                "href" => "/api/blog/".$blog->id,
+                "method" => "GET"
+            ],201);
+        };
+
     }
 
     /**
@@ -122,6 +130,29 @@ class BlogController extends Controller
     public function destroy($id)
     {
         //
-        return "result of DELETE/{$id}";
+        $blog = Blog::findOrFail($id);
+
+        if ($blog->delete()) {
+            return response()->json([
+                "message" => "post deleted",
+                "id" => $blog->id,
+                "title" => $blog->title
+            ],200);
+        };
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function addImage($id, Request $request)
+    {
+        //
+
+        return response()->json($request);
+        //return "result of addImage/{$id}";
     }
 }

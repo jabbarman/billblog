@@ -18,3 +18,5 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 });
 
 Route::apiResource('blog', 'BlogController');
+
+Route::post('blog/{blog}/image', 'BlogController@addImage');
