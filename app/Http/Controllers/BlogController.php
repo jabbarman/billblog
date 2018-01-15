@@ -5,13 +5,14 @@ namespace App\Http\Controllers;
 use App\Providers\AppServiceProvider;
 use Illuminate\Http\Request;
 use App\Blog;
+use App\Upload;
+
 
 class BlogController extends Controller
 {
     public function __construct()
     {
-        // NOT WORKING Needs investigating or using OAuth2 or JWT (JJ - 2018/01/10)
-        $this->middleware('jwt.auth')->only('store', 'update', 'destroy', 'addImage');
+        $this->middleware('jwt.auth')->only('store', 'update', 'destroy', 'upload');
     }
 
     /**
@@ -116,7 +117,7 @@ class BlogController extends Controller
                 "title" => $blog->title,
                 "href" => "/api/v1/blog/".$blog->id,
                 "method" => "GET"
-            ],201);
+            ],200);
         };
 
     }
@@ -148,11 +149,26 @@ class BlogController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function addImage($id, Request $request)
+    public function upload($id, Request $request)
     {
-        //
+        $upload = new Upload;
 
-        return response()->json($request);
-        //return "result of addImage/{$id}";
+        if ($upload->path = $request->file('image')->store('public')) {
+            $upload->post_id = $id;
+        }
+        else {
+            return response()->json([
+                "message" => "file not accepted",
+                "blog_id" => $id
+            ],400  );
+        };
+
+        if ($upload->save()) {
+            return response()->json([
+                "message" => "file accepted",
+                "blog_id" => $id,
+                "upload_id" => $upload->id
+            ],202 );
+        };
     }
 }

@@ -15,13 +15,10 @@ use Illuminate\Http\Request;
 
 
 Route::prefix('v1')->group(function () {
-//    Route::middleware('auth:api')->get('/user', function (Request $request) {
-//        return $request->user();
-//    });
     Route::post('user', 'AuthenticateController@store');
     Route::post('user/authenticate', 'AuthenticateController@authenticate');
     Route::apiResource('blog', 'BlogController');
-    Route::post('blog/{blog}/image', 'BlogController@addImage');
+    Route::post('blog/{blog}/upload', 'BlogController@upload');
 });
 
 
