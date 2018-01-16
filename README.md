@@ -1,18 +1,18 @@
-#billblog
+# billblog
 
-##Introduction
+## Introduction
 A simple Laravel based api to allow basic blogging functions
 
-##Overview
+## Overview
 This is for testing Laravel as a basis for developing a RESTful web service
 
-##Authentication
+## Authentication
 AUthentication is JSON Web Token based and a user account is required in order to gt hold of a token. The token is required for adding, editing or removing actual data
 
-##Error Codes
+## Error Codes
 400, 404, 200, 201, 500 etc
 
-##Rate limit
+## Rate limit
 60 per minute
 
 ## RESTful endpoints
