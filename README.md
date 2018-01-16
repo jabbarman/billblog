@@ -30,7 +30,7 @@ AUthentication is JSON Web Token based and a user account is required in order t
 
 #### edit a blog post
 **PATCH** `api/v1/blog/{blog}?token={token}`
-[_image_],[_body_]
+[_title_],[_body_]
 
 #### show a blog post
 **GET** `api/v1/blog/{blog}`
