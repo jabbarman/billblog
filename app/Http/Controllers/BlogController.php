@@ -6,6 +6,7 @@ use App\Providers\AppServiceProvider;
 use Illuminate\Http\Request;
 use App\Blog;
 use App\Upload;
+use App\Label;
 
 
 class BlogController extends Controller
@@ -35,8 +36,15 @@ class BlogController extends Controller
             ];
         }
 
+        if (count($response) > 0) {
+            $message = "posts found";
+        }
+        else {
+            $message = "no posts found!";
+        }
+
         return response()->json([
-            "message" => "posts found",
+            "message" => $message,
             "posts" => $response
         ],200);
     }
@@ -76,11 +84,37 @@ class BlogController extends Controller
     public function show($id)
     {
         $blog = Blog::findOrFail($id);
+        $uploads = Upload::all()->where('post_id',$id);
+        $labels = Label::all()->where('post_id',$id);
+
+        $images = [];
+        foreach($uploads as $upload) {
+            if ($path_parts = pathinfo($upload->path)) {
+                $images[] = [
+                    "id" => $upload->id,
+                    "href" => "/storage/" . $path_parts['basename'],
+                    "method" => 'GET'
+                ];
+            }
+        }
+
+        $labels_list = [];
+
+        foreach($labels as $label) {
+            if ($path_parts = pathinfo($upload->path)) {
+                $labels_list[] = [
+                    "id" => $label->id,
+                    "name" => $label->name,
+                ];
+            }
+        }
 
         $post = [
             "id" => $blog->id,
             "title" => $blog->title,
             "body" => $blog->body,
+            "images" => $images,
+            "labels" => $labels_list,
             "user_id" => $blog->user_id,
             "created_at" => $blog->created_at,
             "updated_at" => $blog->updated_at,
@@ -90,7 +124,7 @@ class BlogController extends Controller
 
         return response()->json([
             "message" => "post found",
-            "post" => $post
+            "post" => $post,
         ],200);
     }
 
@@ -143,7 +177,7 @@ class BlogController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Upload the specified resource from storage.
      *
      * @param  int  $id
      * @param  \Illuminate\Http\Request  $request
@@ -171,4 +205,65 @@ class BlogController extends Controller
             ],202 );
         };
     }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  int  $id
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function addLabel($id, Request $request)
+    {
+
+        if ( $label = Label::firstOrCreate([
+                "name" => $request->name,
+                "post_id" => $id,
+            ]))
+            {
+                return response()->json([
+                    "message" => "label created",
+                    "id" => $label->id,
+                    "name" => $label->name,
+                    "href" => "/api/v1/blog/".$id,
+                    "method" => "GET"
+                ],201);
+            } else
+        {}
+
+    }
+
+    /**
+     * Remove the specified label from storage.
+     *
+     * @param  int  $id
+     * @param  int  $label_id
+     * @return \Illuminate\Http\Response
+     */
+    public function delLabel($id,$label_id)
+    {
+        $blog = Blog::findOrFail($id);
+
+        if ($label = Label::find($label_id)) {
+
+            if ($label->delete()) {
+                return response()->json([
+                    "message" => "label deleted",
+                    "id" => $label->id,
+                    "name" => $label->name,
+                    "href" => "/api/v1/blog/" . $blog->id,
+                    "method" => "GET"
+                ], 200);
+            }
+        }
+        else {
+            return response()->json([
+                "message" => "label not found",
+                "id" => $label_id,
+                "href" => "/api/v1/blog/".$blog->id,
+                "method" => "GET"
+            ],200);
+        };
+    }
+
 }

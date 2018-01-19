@@ -7,7 +7,7 @@ A simple Laravel based api to allow basic blogging functions
 This is for testing Laravel as a basis for developing a RESTful web service
 
 ## Authentication
-AUthentication is JSON Web Token based and a user account is required in order to gt hold of a token. The token is required for adding, editing or removing actual data
+Authentication is JSON Web Token based and a user account is required in order to gt hold of a token. The token is required for adding, editing or removing actual data
 
 ## Error Codes
 400, 404, 200, 201, 500 etc
@@ -36,7 +36,14 @@ AUthentication is JSON Web Token based and a user account is required in order t
 **GET** `api/v1/blog/{blog}`
 
 #### delete a blog post
-**DEL** `api/v1/blog/{blog}`
+**DEL** `api/v1/blog/{blog}?token={token}`
+
+#### add a label to a post
+**POST** `api/v1/blog/{blog}/label?token={token}`
+[_name_]
+
+#### delete a label from a post
+**DEL** `api/v1/blog/{blog}/label/{label}?token={token}`
 
 #### authenticate a user
 **POST** `api/v1/user/authenticate`
