@@ -101,12 +101,10 @@ class BlogController extends Controller
         $labels_list = [];
 
         foreach($labels as $label) {
-            if ($path_parts = pathinfo($upload->path)) {
-                $labels_list[] = [
-                    "id" => $label->id,
-                    "name" => $label->name,
-                ];
-            }
+            $labels_list[] = [
+                "id" => $label->id,
+                "name" => $label->name,
+            ];
         }
 
         $post = [
