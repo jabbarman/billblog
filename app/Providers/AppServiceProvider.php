@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Schema;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -14,6 +16,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         //
+        $environment = App::environment();
+        if ($environment == 'staging') {
+            // The environment is staging...
+            Schema::defaultStringLength(191);
+        }
     }
 
     /**
