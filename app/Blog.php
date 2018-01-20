@@ -23,4 +23,11 @@ class Blog extends Model
      * @var array
      */
     protected $dates = ['deleted_at'];
+    /**
+     * Get the user that owns the blog post.
+     */
+    public function user()
+    {
+        return $this->belongsTo('App\User');
+    }
 }

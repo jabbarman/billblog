@@ -7,13 +7,14 @@ use Illuminate\Http\Request;
 use App\Blog;
 use App\Upload;
 use App\Label;
+use JWTAuth;
 
 
 class BlogController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('jwt.auth')->only('store', 'update', 'destroy', 'upload');
+        $this->middleware('jwt.auth')->only('store', 'update', 'destroy', 'upload', 'addLabel', 'delLabel');
     }
 
     /**
@@ -31,6 +32,7 @@ class BlogController extends Controller
             $response[] = [
                 "id" => $blog->id,
                 "title" => $blog->title,
+                "creator" => $blog->user->name,
                 "href" => "/api/v1/blog/".$blog->id,
                 "method" => "GET"
             ];
@@ -57,21 +59,30 @@ class BlogController extends Controller
      */
     public function store(Request $request)
     {
-        $blog = new Blog;
+        $user = JWTAuth::parseToken()->toUser();
 
-        $blog->user_id = 1;  // hard coded until we get authentication on stream
-        $blog->title = $request->title;
-        $blog->body = $request->body;
+        if ($user->id) {
+            $blog = new Blog;
+            $blog->user_id = $user->id;
+            $blog->title = $request->title;
+            $blog->body = $request->body;
 
-        if ($blog->save()) {
+            if ($blog->save()) {
+                return response()->json([
+                    "message" => "post created",
+                    "id" => $blog->id,
+                    "title" => $blog->title,
+                    "creator" => $blog->user->name,
+                    "href" => "/api/v1/blog/" . $blog->id,
+                    "method" => "GET"
+                ], 201);
+            };
+        }
+        else {
             return response()->json([
-                "message" => "post created",
-                "id" => $blog->id,
-                "title" => $blog->title,
-                "href" => "/api/v1/blog/".$blog->id,
-                "method" => "GET"
-            ],201);
-        };
+                "message" => "the action is forbidden for this user",
+            ], 403);
+        }
 
     }
 
@@ -114,6 +125,7 @@ class BlogController extends Controller
             "images" => $images,
             "labels" => $labels_list,
             "user_id" => $blog->user_id,
+            "creator" => $blog->user->name,
             "created_at" => $blog->created_at,
             "updated_at" => $blog->updated_at,
             "href" => "/api/v1/blog/" . $blog->id,
@@ -138,20 +150,29 @@ class BlogController extends Controller
     {
         $blog = Blog::findOrFail($id);
 
-        $blog->user_id = 1;  // hard coded until we get authentication on stream
-        (!empty(trim($request->title))?$blog->title = (trim($request->title)):null);
-        (!empty(trim($request->body))?$blog->body = (trim($request->body)):null);
+        $user = JWTAuth::parseToken()->toUser();
 
-        if ($blog->save()) {
+        if ($user->id == $blog->user_id) {
+            (!empty(trim($request->title)) ? $blog->title = (trim($request->title)) : null);
+            (!empty(trim($request->body)) ? $blog->body = (trim($request->body)) : null);
+
+            if ($blog->save()) {
+                return response()->json([
+                    "message" => "post edited",
+                    "id" => $blog->id,
+                    "title" => $blog->title,
+                    "user_id" => $blog->id,
+                    "creator" => $blog->user->name,
+                    "href" => "/api/v1/blog/" . $blog->id,
+                    "method" => "GET"
+                ], 200);
+            };
+        }
+        else {
             return response()->json([
-                "message" => "post edited",
-                "id" => $blog->id,
-                "title" => $blog->title,
-                "href" => "/api/v1/blog/".$blog->id,
-                "method" => "GET"
-            ],200);
-        };
-
+                "message" => "the action is forbidden for this user",
+            ], 403);
+        }
     }
 
     /**
@@ -165,13 +186,22 @@ class BlogController extends Controller
         //
         $blog = Blog::findOrFail($id);
 
-        if ($blog->delete()) {
+        $user = JWTAuth::parseToken()->toUser();
+
+        if ($user->id == $blog->user_id) {
+            if ($blog->delete()) {
+                return response()->json([
+                    "message" => "post deleted",
+                    "id" => $blog->id,
+                    "title" => $blog->title
+                ], 200);
+            };
+        }
+        else {
             return response()->json([
-                "message" => "post deleted",
-                "id" => $blog->id,
-                "title" => $blog->title
-            ],200);
-        };
+                "message" => "the action is forbidden for this user",
+            ], 403);
+        }
     }
 
     /**
@@ -183,25 +213,35 @@ class BlogController extends Controller
      */
     public function upload($id, Request $request)
     {
-        $upload = new Upload;
+        $blog = Blog::findOrFail($id);
 
-        if ($upload->path = $request->file('image')->store('public')) {
-            $upload->post_id = $id;
+        $user = JWTAuth::parseToken()->toUser();
+
+        if ($user->id == $blog->user_id) {
+            $upload = new Upload;
+
+            if ($upload->path = $request->file('image')->store('public')) {
+                $upload->post_id = $id;
+            } else {
+                return response()->json([
+                    "message" => "file not accepted",
+                    "blog_id" => $id
+                ], 400);
+            };
+
+            if ($upload->save()) {
+                return response()->json([
+                    "message" => "file accepted",
+                    "blog_id" => $id,
+                    "upload_id" => $upload->id
+                ], 202);
+            };
         }
         else {
             return response()->json([
-                "message" => "file not accepted",
-                "blog_id" => $id
-            ],400  );
-        };
-
-        if ($upload->save()) {
-            return response()->json([
-                "message" => "file accepted",
-                "blog_id" => $id,
-                "upload_id" => $upload->id
-            ],202 );
-        };
+                "message" => "the action is forbidden for this user",
+            ], 403);
+        }
     }
 
     /**
@@ -213,21 +253,29 @@ class BlogController extends Controller
      */
     public function addLabel($id, Request $request)
     {
+        $blog = Blog::findOrFail($id);
 
-        if ( $label = Label::firstOrCreate([
+        $user = JWTAuth::parseToken()->toUser();
+
+        if ($user->id == $blog->user_id) {
+            if ($label = Label::firstOrCreate([
                 "name" => $request->name,
                 "post_id" => $id,
-            ]))
-            {
+            ])) {
                 return response()->json([
                     "message" => "label created",
                     "id" => $label->id,
                     "name" => $label->name,
-                    "href" => "/api/v1/blog/".$id,
+                    "href" => "/api/v1/blog/" . $id,
                     "method" => "GET"
-                ],201);
-            } else
-        {}
+                ], 201);
+            }
+        }
+        else {
+            return response()->json([
+                "message" => "the action is forbidden for this user",
+            ], 403);
+        }
 
     }
 
@@ -242,26 +290,33 @@ class BlogController extends Controller
     {
         $blog = Blog::findOrFail($id);
 
-        if ($label = Label::find($label_id)) {
+        $user = JWTAuth::parseToken()->toUser();
 
-            if ($label->delete()) {
+        if ($user->id == $blog->user_id) {
+            if ($label = Label::find($label_id)) {
+                if ($label->delete()) {
+                    return response()->json([
+                        "message" => "label deleted",
+                        "id" => $label->id,
+                        "name" => $label->name,
+                        "href" => "/api/v1/blog/" . $blog->id,
+                        "method" => "GET"
+                    ], 200);
+                }
+            } else {
                 return response()->json([
-                    "message" => "label deleted",
-                    "id" => $label->id,
-                    "name" => $label->name,
+                    "message" => "label not found",
+                    "id" => $label_id,
                     "href" => "/api/v1/blog/" . $blog->id,
                     "method" => "GET"
                 ], 200);
-            }
+            };
         }
         else {
             return response()->json([
-                "message" => "label not found",
-                "id" => $label_id,
-                "href" => "/api/v1/blog/".$blog->id,
-                "method" => "GET"
-            ],200);
-        };
+                "message" => "the action is forbidden for this user",
+            ], 403);
+        }
     }
 
 }
