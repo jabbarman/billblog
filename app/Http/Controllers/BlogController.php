@@ -28,9 +28,8 @@ class BlogController extends Controller
 
         $response = [];
 
-        $links = ['rel'=>"self","href"=> Request::capture()->fullUrl(), "method"=>"GET"];
-
         foreach($blogs as $blog) {
+            $links = ['rel'=>"self","href"=> Request::capture()->fullUrl().$blog->id, "method"=>"GET"];
             $response[] = [
                 "id" => $blog->id,
                 "title" => $blog->title,
@@ -99,14 +98,15 @@ class BlogController extends Controller
         $uploads = Upload::all()->where('post_id',$id);
         $labels = Label::all()->where('post_id',$id);
 
-        $links = ['rel'=>"self","href"=> Request::capture()->fullUrl(), "method"=>"GET"];
+        $links = ['rel'=>"self","href"=> Request::capture()->fullUrl().$blog->id, "method"=>"GET"];
 
         $images = [];
         foreach($uploads as $upload) {
             if ($path_parts = pathinfo($upload->path)) {
                 $images[] = [
                     "id" => $upload->id,
-                    "_links"=>$links
+                    "href" => "/storage/" . $path_parts['basename'],
+                    "method" => 'GET'
                 ];
             }
         }
@@ -130,8 +130,7 @@ class BlogController extends Controller
             "creator" => $blog->user->name,
             "created_at" => $blog->created_at,
             "updated_at" => $blog->updated_at,
-            "href" => "/api/v1/blog/" . $blog->id,
-            "method" => 'GET'
+            "_link" => $links
         ];
 
         return response()->json([
