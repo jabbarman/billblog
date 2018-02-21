@@ -98,12 +98,12 @@ class BlogController extends Controller
         $uploads = Upload::all()->where('post_id',$id);
         $labels = Label::all()->where('post_id',$id);
 
-        $links = ['rel'=>"self","href"=> Request::capture()->fullUrl().'/'.$blog->id, "method"=>"GET"];
+        $links = ['rel'=>"self","href"=> Request::capture()->fullUrl(), "method"=>"GET"];
 
         $images = [];
         foreach($uploads as $upload) {
             if ($path_parts = pathinfo($upload->path)) {
-                $storage_links = ['rel'=>"self","href"=> Request::capture()->fullUrl()."/storage/" . $path_parts['basename'], "method"=>"GET"];
+                $storage_links = ['rel'=>"self","href"=> Request::capture()->root()."/storage/" . $path_parts['basename'], "method"=>"GET"];
                 $images[] = [
                     "id" => $upload->id,
                     "_links" => $storage_links
