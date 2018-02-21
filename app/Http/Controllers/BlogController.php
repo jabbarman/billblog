@@ -28,13 +28,14 @@ class BlogController extends Controller
 
         $response = [];
 
+        $links = ['rel'=>"self","href"=> Request::capture()->fullUrl(), "method"=>"GET"];
+
         foreach($blogs as $blog) {
             $response[] = [
                 "id" => $blog->id,
                 "title" => $blog->title,
                 "creator" => $blog->user->name,
-                "href" => "/api/v1/blog/".$blog->id,
-                "method" => "GET"
+                "_links"=>$links,
             ];
         }
 
