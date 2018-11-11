@@ -4,24 +4,38 @@ namespace App\Http\Controllers;
 
 use App\User;
 use Illuminate\Http\Request;
-use JWTAuth;
+use Tymon\JWTAuth\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 
 class AuthenticateController extends Controller
 {
-    public function store(Request $request)
+    private $user;
+
+    /**
+     * @param Request $request
+     *
+     * @param User    $user
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function store(Request $request, User $user)
     {
-        $user = new User;
+        $this->user = $user;
 
-        $user->name = $request->name;
-        $user->email = $request->email;
-        $user->password = bcrypt($request->password);
+        $this->user->name = $request->name;
+        $this->user->email = $request->email;
+        $this->user->password = bcrypt($request->password);
 
-        if ($user->save()) {
+        if ($this->user->save()) {
             return response()->json(["message" => "user created"], 200);
         }
     }
 
+    /**
+     * @param Request $request
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function authenticate(Request $request)
     {
         // grab credentials from the request

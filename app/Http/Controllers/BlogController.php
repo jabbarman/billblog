@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Providers\AppServiceProvider;
 use Illuminate\Http\Request;
 use App\Blog;
 use App\Upload;
 use App\Label;
-use JWTAuth;
-
+use Illuminate\Http\Response;
+use Tymon\JWTAuth\JWTAuth;
 
 class BlogController extends Controller
 {
+    /**
+     * BlogController constructor.
+     */
     public function __construct()
     {
         $this->middleware('jwt.auth')->only('store', 'update', 'destroy', 'upload', 'addLabel', 'delLabel');
@@ -20,7 +22,7 @@ class BlogController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -30,7 +32,7 @@ class BlogController extends Controller
 
         $links = ['rel'=>"self","href"=> Request::capture()->fullUrl(), "method"=>"GET"];
 
-        foreach($blogs as $blog) {
+        foreach ($blogs as $blog) {
             $response[] = [
                 "id" => $blog->id,
                 "title" => $blog->title,
@@ -41,22 +43,23 @@ class BlogController extends Controller
 
         if (count($response) > 0) {
             $message = "posts found";
-        }
-        else {
+        } else {
             $message = "no posts found!";
         }
 
         return response()->json([
             "message" => $message,
             "posts" => $response
-        ],200);
+        ], 200);
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  \Illuminate\Http\Request $request
+     *
+     * @return Response
+     * @throws \Tymon\JWTAuth\Exceptions\JWTException
      */
     public function store(Request $request)
     {
@@ -78,29 +81,27 @@ class BlogController extends Controller
                     "method" => "GET"
                 ], 201);
             };
-        }
-        else {
+        } else {
             return response()->json([
                 "message" => "the action is forbidden for this user",
             ], 403);
         }
-
     }
 
     /**
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {
         $blog = Blog::findOrFail($id);
-        $uploads = Upload::all()->where('post_id',$id);
-        $labels = Label::all()->where('post_id',$id);
+        $uploads = Upload::all()->where('post_id', $id);
+        $labels = Label::all()->where('post_id', $id);
 
         $images = [];
-        foreach($uploads as $upload) {
+        foreach ($uploads as $upload) {
             if ($path_parts = pathinfo($upload->path)) {
                 $images[] = [
                     "id" => $upload->id,
@@ -112,7 +113,7 @@ class BlogController extends Controller
 
         $labels_list = [];
 
-        foreach($labels as $label) {
+        foreach ($labels as $label) {
             $labels_list[] = [
                 "id" => $label->id,
                 "name" => $label->name,
@@ -136,16 +137,18 @@ class BlogController extends Controller
         return response()->json([
             "message" => "post found",
             "post" => $post,
-        ],200);
+        ], 200);
     }
 
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @param  \Illuminate\Http\Request $request
+     * @param  int                      $id
+     *
+     * @return Response
+     * @throws \Tymon\JWTAuth\Exceptions\JWTException
      */
     public function update(Request $request, $id)
     {
@@ -168,8 +171,7 @@ class BlogController extends Controller
                     "method" => "GET"
                 ], 200);
             };
-        }
-        else {
+        } else {
             return response()->json([
                 "message" => "the action is forbidden for this user",
             ], 403);
@@ -179,8 +181,10 @@ class BlogController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @param  int $id
+     *
+     * @return Response
+     * @throws \Tymon\JWTAuth\Exceptions\JWTException
      */
     public function destroy($id)
     {
@@ -197,8 +201,7 @@ class BlogController extends Controller
                     "title" => $blog->title
                 ], 200);
             };
-        }
-        else {
+        } else {
             return response()->json([
                 "message" => "the action is forbidden for this user",
             ], 403);
@@ -208,9 +211,11 @@ class BlogController extends Controller
     /**
      * Upload the specified resource from storage.
      *
-     * @param  int  $id
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  int                      $id
+     * @param  \Illuminate\Http\Request $request
+     *
+     * @return Response
+     * @throws \Tymon\JWTAuth\Exceptions\JWTException
      */
     public function upload($id, Request $request)
     {
@@ -237,8 +242,7 @@ class BlogController extends Controller
                     "upload_id" => $upload->id
                 ], 202);
             };
-        }
-        else {
+        } else {
             return response()->json([
                 "message" => "the action is forbidden for this user",
             ], 403);
@@ -248,9 +252,11 @@ class BlogController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  int  $id
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param  int                      $id
+     * @param  \Illuminate\Http\Request $request
+     *
+     * @return Response
+     * @throws \Tymon\JWTAuth\Exceptions\JWTException
      */
     public function addLabel($id, Request $request)
     {
@@ -271,23 +277,23 @@ class BlogController extends Controller
                     "method" => "GET"
                 ], 201);
             }
-        }
-        else {
+        } else {
             return response()->json([
                 "message" => "the action is forbidden for this user",
             ], 403);
         }
-
     }
 
     /**
      * Remove the specified label from storage.
      *
-     * @param  int  $id
-     * @param  int  $label_id
-     * @return \Illuminate\Http\Response
+     * @param  int $id
+     * @param  int $label_id
+     *
+     * @return Response
+     * @throws \Tymon\JWTAuth\Exceptions\JWTException
      */
-    public function delLabel($id,$label_id)
+    public function delLabel($id, $label_id)
     {
         $blog = Blog::findOrFail($id);
 
@@ -312,8 +318,7 @@ class BlogController extends Controller
                     "method" => "GET"
                 ], 200);
             };
-        }
-        else {
+        } else {
             return response()->json([
                 "message" => "the action is forbidden for this user",
             ], 403);
