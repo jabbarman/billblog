@@ -2,21 +2,46 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Http\Request;
 use App\Blog;
 use App\Upload;
 use App\Label;
 use Illuminate\Http\Response;
-use Tymon\JWTAuth\JWTAuth;
 
 class BlogController extends Controller
 {
+    protected $request;
+    protected $fullUrl;
+    protected $url;
+    protected $blog;
+    protected $upload;
+    protected $label;
+
     /**
      * BlogController constructor.
+     *
+     * @param Request      $request
+     * @param UrlGenerator $url
+     * @param Blog         $blog
+     * @param Upload       $upload
+     * @param Label        $label
      */
-    public function __construct()
-    {
+    public function __construct(
+        Request $request,
+        UrlGenerator $url,
+        Blog $blog,
+        Upload $upload,
+        Label $label
+    ) {
         $this->middleware('jwt.auth')->only('store', 'update', 'destroy', 'upload', 'addLabel', 'delLabel');
+
+        $this->request = $request;
+        $this->fullUrl = $this->request->fullUrl();
+        $this->url = $url->to('/');
+        $this->blog = $blog;
+        $this->upload = $upload;
+        $this->label = $label;
     }
 
     /**
@@ -26,59 +51,53 @@ class BlogController extends Controller
      */
     public function index()
     {
-        $blogs = Blog::all();
-
-        $response = [];
-
-        $links = ['rel'=>"self","href"=> Request::capture()->fullUrl(), "method"=>"GET"];
-
-        foreach ($blogs as $blog) {
-            $response[] = [
-                "id" => $blog->id,
-                "title" => $blog->title,
-                "creator" => $blog->user->name,
-                "_links"=>$links,
+        $posts = null;
+        foreach ($this->blog->all() as $post) {
+            $postLinks['href'] = $this->fullUrl . '/' . $post->id;
+            $posts[] = [
+                "id" => $post->id,
+                "title" => $post->title,
+                "creator" => $post->user->name,
+                "links"=>$postLinks
             ];
         }
 
-        if (count($response) > 0) {
+        $message = "no posts found!";
+        if (count($posts) > 0) {
             $message = "posts found";
-        } else {
-            $message = "no posts found!";
         }
 
+        $links = ['self' => $this->fullUrl];
         return response()->json([
             "message" => $message,
-            "posts" => $response
+            "posts" => $posts,
+            "links" => $links
         ], 200);
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request $request
-     *
      * @return Response
-     * @throws \Tymon\JWTAuth\Exceptions\JWTException
      */
-    public function store(Request $request)
+    public function store()
     {
-        $user = JWTAuth::parseToken()->toUser();
+        $user = auth()->user();
 
         if ($user->id) {
-            $blog = new Blog;
-            $blog->user_id = $user->id;
-            $blog->title = $request->title;
-            $blog->body = $request->body;
+            $post = new $this->blog;
+            $post->user_id = $user->id;
+            $post->title = $this->request->title;
+            $post->body = $this->request->body;
 
-            if ($blog->save()) {
+            if ($post->save()) {
+                $links['href'] = $this->fullUrl . '/' . $post->id;
                 return response()->json([
                     "message" => "post created",
-                    "id" => $blog->id,
-                    "title" => $blog->title,
-                    "creator" => $blog->user->name,
-                    "href" => "/api/v1/blog/" . $blog->id,
-                    "method" => "GET"
+                    "id" => $post->id,
+                    "title" => $post->title,
+                    "creator" => $post->user->name,
+                    "links" => $links
                 ], 201);
             };
         } else {
@@ -96,23 +115,21 @@ class BlogController extends Controller
      */
     public function show($id)
     {
-        $blog = Blog::findOrFail($id);
-        $uploads = Upload::all()->where('post_id', $id);
-        $labels = Label::all()->where('post_id', $id);
+        $post = $this->blog->findOrFail($id);
+        $uploads = $this->upload->all()->where('post_id', $id);
+        $labels = $this->label->all()->where('post_id', $id);
 
-        $images = [];
+        $images = null;
         foreach ($uploads as $upload) {
             if ($path_parts = pathinfo($upload->path)) {
                 $images[] = [
                     "id" => $upload->id,
-                    "href" => "/storage/" . $path_parts['basename'],
-                    "method" => 'GET'
+                    "href" => $this->url . "/storage/" . $path_parts['basename'],
                 ];
             }
         }
 
-        $labels_list = [];
-
+        $labels_list = null;
         foreach ($labels as $label) {
             $labels_list[] = [
                 "id" => $label->id,
@@ -121,22 +138,22 @@ class BlogController extends Controller
         }
 
         $post = [
-            "id" => $blog->id,
-            "title" => $blog->title,
-            "body" => $blog->body,
+            "id" => $post->id,
+            "title" => $post->title,
+            "body" => $post->body,
             "images" => $images,
             "labels" => $labels_list,
-            "user_id" => $blog->user_id,
-            "creator" => $blog->user->name,
-            "created_at" => $blog->created_at,
-            "updated_at" => $blog->updated_at,
-            "href" => "/api/v1/blog/" . $blog->id,
-            "method" => 'GET'
+            "user_id" => $post->user_id,
+            "creator" => $post->user->name,
+            "created_at" => $post->created_at,
+            "updated_at" => $post->updated_at,
         ];
 
+        $links['self'] = $this->fullUrl;
         return response()->json([
             "message" => "post found",
             "post" => $post,
+            "links" => $links,
         ], 200);
     }
 
@@ -144,31 +161,28 @@ class BlogController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request $request
-     * @param  int                      $id
+     * @param  int $id
      *
      * @return Response
-     * @throws \Tymon\JWTAuth\Exceptions\JWTException
      */
-    public function update(Request $request, $id)
+    public function update($id)
     {
-        $blog = Blog::findOrFail($id);
+        $post = $this->blog->findOrFail($id);
+        $user = auth()->user();
 
-        $user = JWTAuth::parseToken()->toUser();
+        if ($user->id == $post->user_id) {
+            (!empty(trim($this->request->title)) ? $post->title = (trim($this->request->title)) : null);
+            (!empty(trim($this->request->body)) ? $post->body = (trim($this->request->body)) : null);
 
-        if ($user->id == $blog->user_id) {
-            (!empty(trim($request->title)) ? $blog->title = (trim($request->title)) : null);
-            (!empty(trim($request->body)) ? $blog->body = (trim($request->body)) : null);
-
-            if ($blog->save()) {
+            if ($post->save()) {
+                $links['self'] = $this->fullUrl;
                 return response()->json([
                     "message" => "post edited",
-                    "id" => $blog->id,
-                    "title" => $blog->title,
-                    "user_id" => $blog->id,
-                    "creator" => $blog->user->name,
-                    "href" => "/api/v1/blog/" . $blog->id,
-                    "method" => "GET"
+                    "id" => $post->id,
+                    "title" => $post->title,
+                    "user_id" => $post->id,
+                    "creator" => $post->user->name,
+                    "links" => $links
                 ], 200);
             };
         } else {
@@ -184,21 +198,18 @@ class BlogController extends Controller
      * @param  int $id
      *
      * @return Response
-     * @throws \Tymon\JWTAuth\Exceptions\JWTException
      */
     public function destroy($id)
     {
-        //
-        $blog = Blog::findOrFail($id);
+        $post = $this->blog->findOrFail($id);
+        $user = auth()->user();
 
-        $user = JWTAuth::parseToken()->toUser();
-
-        if ($user->id == $blog->user_id) {
-            if ($blog->delete()) {
+        if ($user->id == $post->user_id) {
+            if ($post->delete()) {
                 return response()->json([
                     "message" => "post deleted",
-                    "id" => $blog->id,
-                    "title" => $blog->title
+                    "id" => $post->id,
+                    "title" => $post->title
                 ], 200);
             };
         } else {
@@ -211,22 +222,19 @@ class BlogController extends Controller
     /**
      * Upload the specified resource from storage.
      *
-     * @param  int                      $id
-     * @param  \Illuminate\Http\Request $request
+     * @param  int $id
      *
      * @return Response
-     * @throws \Tymon\JWTAuth\Exceptions\JWTException
      */
-    public function upload($id, Request $request)
+    public function upload($id)
     {
-        $blog = Blog::findOrFail($id);
+        $post = $this->blog->findOrFail($id);
+        $user = auth()->user();
 
-        $user = JWTAuth::parseToken()->toUser();
+        if ($user->id == $post->user_id) {
+            $upload = new $this->upload;
 
-        if ($user->id == $blog->user_id) {
-            $upload = new Upload;
-
-            if ($upload->path = $request->file('image')->store('public')) {
+            if ($upload->path = $this->request->file('image')->store('public')) {
                 $upload->post_id = $id;
             } else {
                 return response()->json([
@@ -236,10 +244,12 @@ class BlogController extends Controller
             };
 
             if ($upload->save()) {
+                $path_parts = pathinfo($upload->path);
+                $links['id'] = $upload->id;
+                $links['href'] = $this->url . "/storage/" . $path_parts['basename'];
                 return response()->json([
                     "message" => "file accepted",
-                    "blog_id" => $id,
-                    "upload_id" => $upload->id
+                    "post" => ["id" => $post->id, "title" => $post->title, "image" => $links]
                 ], 202);
             };
         } else {
@@ -252,29 +262,24 @@ class BlogController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  int                      $id
-     * @param  \Illuminate\Http\Request $request
+     * @param  int $id
      *
      * @return Response
-     * @throws \Tymon\JWTAuth\Exceptions\JWTException
      */
-    public function addLabel($id, Request $request)
+    public function addLabel($id)
     {
-        $blog = Blog::findOrFail($id);
+        $post = $this->blog->findOrFail($id);
+        $user = auth()->user();
 
-        $user = JWTAuth::parseToken()->toUser();
-
-        if ($user->id == $blog->user_id) {
-            if ($label = Label::firstOrCreate([
-                "name" => $request->name,
+        if ($user->id == $post->user_id) {
+            if ($label = $this->label->firstOrCreate([
+                "name" => $this->request->name,
                 "post_id" => $id,
             ])) {
                 return response()->json([
                     "message" => "label created",
                     "id" => $label->id,
-                    "name" => $label->name,
-                    "href" => "/api/v1/blog/" . $id,
-                    "method" => "GET"
+                    "name" => $label->name
                 ], 201);
             }
         } else {
@@ -291,31 +296,25 @@ class BlogController extends Controller
      * @param  int $label_id
      *
      * @return Response
-     * @throws \Tymon\JWTAuth\Exceptions\JWTException
      */
     public function delLabel($id, $label_id)
     {
-        $blog = Blog::findOrFail($id);
+        $post = $this->blog->findOrFail($id);
+        $user = auth()->user();
 
-        $user = JWTAuth::parseToken()->toUser();
-
-        if ($user->id == $blog->user_id) {
-            if ($label = Label::find($label_id)) {
+        if ($user->id == $post->user_id) {
+            if ($label = $this->label->find($label_id)) {
                 if ($label->delete()) {
                     return response()->json([
                         "message" => "label deleted",
                         "id" => $label->id,
-                        "name" => $label->name,
-                        "href" => "/api/v1/blog/" . $blog->id,
-                        "method" => "GET"
+                        "name" => $label->name
                     ], 200);
                 }
             } else {
                 return response()->json([
                     "message" => "label not found",
-                    "id" => $label_id,
-                    "href" => "/api/v1/blog/" . $blog->id,
-                    "method" => "GET"
+                    "id" => $label_id
                 ], 200);
             };
         } else {
