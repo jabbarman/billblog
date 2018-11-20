@@ -21,6 +21,7 @@ Route::prefix('v1')->group(function () {
     Route::post('blog/{blog}/upload', 'BlogController@upload');
     Route::delete('blog/{blog}/upload/{upload_id}', 'BlogController@remove');
     Route::post('blog/{blog}/label', 'BlogController@addLabel');
+    Route::post('blog/{blog}/label/{label}', 'BlogController@editLabel');
     Route::delete('blog/{blog}/label/{label}', 'BlogController@delLabel');
 });
 

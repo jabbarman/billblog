@@ -35,7 +35,8 @@ class BlogController extends Controller
         Upload $upload,
         Label $label
     ) {
-        $this->middleware('jwt.auth')->only('store', 'update', 'destroy', 'upload', 'remove', 'addLabel', 'delLabel');
+        $this->middleware('jwt.auth')
+            ->only('store', 'update', 'destroy', 'upload', 'remove', 'addLabel', 'editLabel', 'delLabel');
 
         $this->request = $request;
         $this->fullUrl = $this->request->fullUrl();
@@ -291,7 +292,7 @@ class BlogController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Store a newly created label in storage.
      *
      * @param  int $id
      *
@@ -312,6 +313,42 @@ class BlogController extends Controller
                     "id" => $label->id,
                     "name" => $label->name
                 ], 201);
+            }
+        } else {
+            return response()->json([
+                "message" => "the action is forbidden for this user",
+            ], 403);
+        }
+    }
+
+    /**
+     * edit a previously created label.
+     *
+     * @param  int $id
+     * @param      $label_id
+     *
+     * @return Response
+     */
+    public function editLabel($id, $label_id)
+    {
+        $post = $this->blog->findOrFail($id);
+        $user = auth()->user();
+
+        if ($user->id == $post->user_id) {
+            if ($label = $this->label->findOrFail($label_id)) {
+                $label->name = $this->request->name;
+                if ($label->save()) {
+                    return response()->json([
+                        "message" => "label changed",
+                        "id" => $label->id,
+                        "name" => $label->name
+                    ], 201);
+                } else {
+                    return response()->json([
+                        "message" => "label not changed",
+                        "id" => $label_id
+                    ], 400);
+                };
             }
         } else {
             return response()->json([
