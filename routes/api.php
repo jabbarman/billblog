@@ -19,6 +19,7 @@ Route::prefix('v1')->group(function () {
     Route::post('user/authenticate', 'AuthenticateController@authenticate');
     Route::apiResource('blog', 'BlogController');
     Route::post('blog/{blog}/upload', 'BlogController@upload');
+    Route::delete('blog/{blog}/upload/{upload_id}', 'BlogController@remove');
     Route::post('blog/{blog}/label', 'BlogController@addLabel');
     Route::delete('blog/{blog}/label/{label}', 'BlogController@delLabel');
 });
