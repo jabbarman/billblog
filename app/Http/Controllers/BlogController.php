@@ -8,6 +8,7 @@ use App\Blog;
 use App\Upload;
 use App\Label;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
 
 class BlogController extends Controller
 {
@@ -34,7 +35,7 @@ class BlogController extends Controller
         Upload $upload,
         Label $label
     ) {
-        $this->middleware('jwt.auth')->only('store', 'update', 'destroy', 'upload', 'addLabel', 'delLabel');
+        $this->middleware('jwt.auth')->only('store', 'update', 'destroy', 'upload', 'remove', 'addLabel', 'delLabel');
 
         $this->request = $request;
         $this->fullUrl = $this->request->fullUrl();
@@ -252,6 +253,36 @@ class BlogController extends Controller
                     "post" => ["id" => $post->id, "title" => $post->title, "image" => $links]
                 ], 202);
             };
+        } else {
+            return response()->json([
+                "message" => "the action is forbidden for this user",
+            ], 403);
+        }
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  int $id
+     * @param      $upload_id
+     *
+     * @return Response
+     */
+    public function remove($id, $upload_id)
+    {
+        $post = $this->blog->findOrFail($id);
+        $user = auth()->user();
+
+        if ($user->id == $post->user_id) {
+            if ($upload = $this->upload->findorFail($upload_id)) {
+                // TODO remove from storage
+                $upload->delete();
+                Storage::delete($upload->path);
+                return response()->json([
+                    "message" => "file removed",
+                    "post" => ["id" => $post->id, "title" => $post->title]
+                ], 400);
+            }
         } else {
             return response()->json([
                 "message" => "the action is forbidden for this user",
