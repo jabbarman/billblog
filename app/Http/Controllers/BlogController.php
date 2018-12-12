@@ -92,16 +92,23 @@ class BlogController extends Controller
             $post->title = $this->request->title;
             $post->body = $this->request->body;
 
-            if ($post->save()) {
-                $links['href'] = $this->fullUrl . '/' . $post->id;
+            try {
+                if ($post->save()) {
+                    $links['href'] = $this->fullUrl . '/' . $post->id;
+                    return response()->json([
+                        "message" => "post created",
+                        "id" => $post->id,
+                        "title" => $post->title,
+                        "creator" => $post->user->name,
+                        "links" => $links
+                    ], 201);
+                };
+            } catch (\Exception $exception) {
                 return response()->json([
-                    "message" => "post created",
-                    "id" => $post->id,
-                    "title" => $post->title,
-                    "creator" => $post->user->name,
-                    "links" => $links
-                ], 201);
-            };
+                    "message" => "post not created",
+                    "error" => $exception->getMessage()
+                ], 400);
+            }
         } else {
             return response()->json([
                 "message" => "the action is forbidden for this user",
