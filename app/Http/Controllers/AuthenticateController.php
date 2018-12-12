@@ -26,8 +26,12 @@ class AuthenticateController extends Controller
         $this->user->email = $request->email;
         $this->user->password = bcrypt($request->password);
 
-        if ($this->user->save()) {
-            return response()->json(["message" => "user created"], 200);
+        try {
+            if ($this->user->save()) {
+                return response()->json(["message" => "user created"], 200);
+            }
+        } catch (\Exception $exception) {
+            return response()->json(["message" => "user not created", "error" => $exception->getMessage()], 400);
         }
     }
 
