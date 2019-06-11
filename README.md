@@ -157,7 +157,7 @@ _[``name``]_
 _[``email``,``password``]_
 ```
 {
-    "token": "eyJ0eXAiOiJKV1QiLCJhbGciO...dUjWQYVOwiRSo"
+    "token": "eyJ0eXAiOiJKV1QiLCJhbGci...dUjWQYVOwiRSo"
 }
 ```
 
