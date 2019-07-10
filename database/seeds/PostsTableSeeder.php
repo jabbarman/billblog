@@ -21,7 +21,8 @@ class PostsTableSeeder extends Seeder
             "Two's company",
             "Three's a crowd",
             "May the fourth be with you",
-            "Forfar 5 East Fife 4"
+            "Forfar 5 East Fife 4",
+            "Six and Dregs and Rick and Roll"
         ];
         for ($i=0; $i<count($titles); $i++) {
             DB::table('posts')->insert([
