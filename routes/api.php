@@ -15,8 +15,8 @@ use Illuminate\Http\Request;
 
 
 Route::prefix('v1')->group(function () {
-    Route::post('user', 'AuthenticateController@store');
-    Route::post('user/authenticate', 'AuthenticateController@authenticate');
+    Route::post('user', 'AuthenticateController@store')->name('user.create');
+    Route::post('user/authenticate', 'AuthenticateController@authenticate')->name('user.authenticate');
     Route::apiResource('blog', 'BlogController');
     Route::post('blog/{blog}/upload', 'BlogController@upload');
     Route::delete('blog/{blog}/upload/{upload_id}', 'BlogController@remove');
