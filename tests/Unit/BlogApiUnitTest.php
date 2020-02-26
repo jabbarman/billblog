@@ -20,7 +20,7 @@ class BlogApiUnitTest extends TestCase
         $this->user->password = 'aBcD1two3f0ur';
 
         $this->post = new stdClass();
-        $this->post->title = 'This ia a title';
+        $this->post->title = 'This is a title';
         $this->post->body = 'Some text that will form the body of the posted article';
     }
 
@@ -50,6 +50,28 @@ class BlogApiUnitTest extends TestCase
                 'title' => $this->post->title,
                 'creator' => $this->user->name,
                 'links' => ['href' => 'http://localhost/api/v1/blog/1']
+            ]);
+    }
+
+    public function testListPosts()
+    {
+        $this->createUser();
+        $this->authenticateUser();
+        $this->createPost();
+
+        $this->listPosts()
+            ->assertStatus(200)
+            ->assertExactJson([
+                'message' => 'posts found',
+                'posts' => [
+                    [
+                        'id' => 1,
+                        'title' => $this->post->title,
+                        'creator' => $this->user->name,
+                        'links' => ['href' => 'http://localhost/api/v1/blog/1']
+                    ]
+                ],
+                'links' => ['self' => 'http://localhost/api/v1/blog']
             ]);
     }
 
@@ -91,5 +113,10 @@ class BlogApiUnitTest extends TestCase
         ];
 
         return $this->post(route('blog.store'), $data, $header);
+    }
+
+    private function listPosts()
+    {
+        return $this->get(route('blog.index'));
     }
 }
