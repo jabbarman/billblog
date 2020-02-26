@@ -26,64 +26,60 @@ class BlogApiUnitTest extends TestCase
 
     public function testCreateUser()
     {
-        $data = [
-            'name' => $this->user->name,
-            'email' => $this->user->email,
-            'password' => $this->user->password
-        ];
-
-        $this->post(route('user.create'), $data)
-            ->assertStatus(200);
+        $this->createUser()->assertStatus(200);
     }
 
     public function testAuthenticateUser()
     {
-        $data = [
-            'name' => $this->user->name,
-            'email' => $this->user->email,
-            'password' => $this->user->password
-        ];
+        $this->createUser();
 
-        $this->post(route('user.create'), $data)
-            ->assertStatus(200);
-
-        $data = [
-            'email' => $this->user->email,
-            'password' => $this->user->password
-        ];
-
-        $response = $this->post(route('user.authenticate'), $data)
-            ->assertStatus(200);
-
-        $json = $response->json();
-        $this->user->token = $json['token'];
+        $this->authenticateUser()->assertStatus(200);
         self::assertNotEmpty($this->user->token);
     }
 
     public function testCreatePost()
     {
+        $this->createUser();
+        $this->authenticateUser();
+
+        $this->createPost()
+            ->assertStatus(201)
+            ->assertExactJson([
+                'message' => 'post created',
+                'id' => 1,
+                'title' => $this->post->title,
+                'creator' => $this->user->name,
+                'links' => ['href' => 'http://localhost/api/v1/blog/1']
+            ]);
+    }
+
+    private function createUser()
+    {
         $data = [
             'name' => $this->user->name,
             'email' => $this->user->email,
             'password' => $this->user->password
         ];
 
-        $this->post(route('user.create'), $data)
-            ->assertStatus(200);
+        return $this->post(route('user.create'), $data);
+    }
 
+    private function authenticateUser()
+    {
         $data = [
             'email' => $this->user->email,
             'password' => $this->user->password
         ];
 
-        $response = $this->post(route('user.authenticate'), $data)
-            ->assertStatus(200);
-
+        $response = $this->post(route('user.authenticate'), $data);
         $json = $response->json();
         $this->user->token = $json['token'];
 
-        self::assertNotEmpty($this->user->token);
+        return $response;
+    }
 
+    private function createPost()
+    {
         $data = [
             'title' => $this->post->title,
             'body' => $this->post->body,
@@ -94,25 +90,6 @@ class BlogApiUnitTest extends TestCase
             'Accept' => 'application/json',
         ];
 
-        $response = $this->post(route('blog.store'), $data, $header)
-            ->assertStatus(201);
-
-        $json = $response->json();
-
-        self::assertArrayHasKey('message', $json);
-        self::assertContains('post created', $json['message']);
-
-        self::assertArrayHasKey('id', $json);
-        self::assertEquals(1, $json['id']);
-
-        self::assertArrayHasKey('title', $json);
-        self::assertContains($this->post->title, $json['title']);
-
-        self::assertArrayHasKey('creator', $json);
-        self::assertContains($this->user->name, $json['creator']);
-
-        self::assertArrayHasKey('links', $json);
-        $links = ['href' => 'http://localhost/api/v1/blog/1'];
-        self::assertEquals($links, $json['links']);
+        return $this->post(route('blog.store'), $data, $header);
     }
 }
