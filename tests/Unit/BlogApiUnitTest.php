@@ -75,6 +75,39 @@ class BlogApiUnitTest extends TestCase
             ]);
     }
 
+    public function testListPost()
+    {
+        $this->createUser();
+        $this->authenticateUser();
+        $this->createPost();
+
+        $this->listPost()
+            ->assertStatus(200)
+            ->assertJsonStructure([
+                'message',
+                'post' => [
+                    'id',
+                    'title',
+                    'body',
+                    'images',
+                    'labels',
+                    'user_id',
+                    'creator',
+                    'created_at' => [
+                        'date',
+                        'timezone_type',
+                        'timezone',
+                    ],
+                    'updated_at' => [
+                        'date',
+                        'timezone_type',
+                        'timezone',
+                    ]
+                ],
+                'links',
+            ]);
+    }
+
     private function createUser()
     {
         $data = [
@@ -118,5 +151,11 @@ class BlogApiUnitTest extends TestCase
     private function listPosts()
     {
         return $this->get(route('blog.index'));
+    }
+
+    private function listPost()
+    {
+        $data = [1];
+        return $this->get(route('blog.show', $data));
     }
 }
