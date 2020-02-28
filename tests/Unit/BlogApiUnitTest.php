@@ -68,7 +68,7 @@ class BlogApiUnitTest extends TestCase
                         'id' => 1,
                         'title' => $this->post->title,
                         'creator' => $this->user->name,
-                        'links' => ['href' => 'http://localhost/api/v1/blog/1']
+                        'links' => ['href' => 'http://localhost/api/v1/blog/1'],
                     ]
                 ],
                 'links' => ['self' => 'http://localhost/api/v1/blog']
@@ -93,16 +93,8 @@ class BlogApiUnitTest extends TestCase
                     'labels',
                     'user_id',
                     'creator',
-                    'created_at' => [
-                        'date',
-                        'timezone_type',
-                        'timezone',
-                    ],
-                    'updated_at' => [
-                        'date',
-                        'timezone_type',
-                        'timezone',
-                    ]
+                    'created_at',
+                    'updated_at',
                 ],
                 'links',
             ]);
