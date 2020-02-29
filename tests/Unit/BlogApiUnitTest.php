@@ -2,6 +2,8 @@
 
 namespace Tests\Unit;
 
+use App\Blog;
+use App\Http\Controllers\BlogController;
 use stdClass;
 use Tests\TestCase;
 
@@ -63,6 +65,7 @@ class BlogApiUnitTest extends TestCase
             ->assertStatus(200)
             ->assertExactJson([
                 'message' => 'posts found',
+                'limit' => BlogController::LIMIT_DEFAULT,
                 'posts' => [
                     [
                         'id' => 1,
@@ -71,7 +74,9 @@ class BlogApiUnitTest extends TestCase
                         'links' => ['href' => 'http://localhost/api/v1/blog/1'],
                     ]
                 ],
-                'links' => ['self' => 'http://localhost/api/v1/blog']
+                'links' => ['self' => 'http://localhost/api/v1/blog'],
+                'size' => 1,
+                'start' => 0
             ]);
     }
 
@@ -98,6 +103,63 @@ class BlogApiUnitTest extends TestCase
                 ],
                 'links',
             ]);
+    }
+
+    public function testPaginationReturnsPostsUptoLimit()
+    {
+        $this->createUser();
+        $this->authenticateUser();
+        $this->createManyPosts();
+
+        $response = $this->listPosts()
+            ->assertStatus(200);
+        $json = $response->json();
+
+        self::assertCount(5, $json['posts']);
+
+        $response->assertJson([
+            'limit' => 5,
+            'size' => 5,
+            'start' => 0,
+        ]);
+    }
+
+    public function testPaginationHandlesStartURLParameter()
+    {
+        $this->createUser();
+        $this->authenticateUser();
+        $this->createManyPosts();
+
+        $response = $this->listPostsWithSetStart(5)
+            ->assertStatus(200);
+        $json = $response->json();
+
+        self::assertCount(5, $json['posts']);
+
+        $response->assertJson([
+            'limit' => 5,
+            'size' => 5,
+            'start' => 5,
+        ]);
+    }
+
+    public function testPaginationHandlesOutOfRangeStartURLParameter()
+    {
+        $this->createUser();
+        $this->authenticateUser();
+        $this->createManyPosts();
+
+        $response = $this->listPostsWithSetStart(50)
+            ->assertStatus(400);
+        $json = $response->json();
+
+        self::assertEquals(null, $json['posts']);
+
+        $response->assertJson([
+            'limit' => 5,
+            'size' => 0,
+            'start' => 50,
+        ]);
     }
 
     private function createUser()
@@ -145,9 +207,30 @@ class BlogApiUnitTest extends TestCase
         return $this->get(route('blog.index'));
     }
 
+    /**
+     * @param int $start
+     *
+     * @return \Illuminate\Foundation\Testing\TestResponse
+     */
+    private function listPostsWithSetStart(int $start)
+    {
+        return $this->get("http://localhost/api/v1/blog/?start={$start}");
+    }
+
     private function listPost()
     {
         $data = [1];
         return $this->get(route('blog.show', $data));
+    }
+
+    private function createManyPosts():void
+    {
+        for ($i=0; $i<10; $i++) {
+            $post = new Blog();
+            $post->user_id = 1;
+            $post->title = $this->faker->sentence($nbWords = 3, $variableNbWords = true);
+            $post->body = $this->faker->paragraph($nbSentences = 3, $variableNbSentences = true);
+            $post->save();
+        }
     }
 }

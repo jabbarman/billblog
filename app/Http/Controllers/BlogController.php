@@ -3,21 +3,26 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Blog;
 use App\Upload;
 use App\Label;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 
 class BlogController extends Controller
 {
+    const LIMIT_DEFAULT = 5;
+
     protected $request;
     protected $fullUrl;
     protected $url;
     protected $blog;
     protected $upload;
     protected $label;
+    protected $limit;
+    protected $size;
+    protected $start;
 
     /**
      * BlogController constructor.
@@ -39,22 +44,25 @@ class BlogController extends Controller
             ->only('store', 'update', 'destroy', 'upload', 'remove', 'addLabel', 'editLabel', 'delLabel');
 
         $this->request = $request;
-        $this->fullUrl = $this->request->fullUrl();
+        $this->fullUrl = $this->request->Url();
         $this->url = $url->to('/');
         $this->blog = $blog;
         $this->upload = $upload;
         $this->label = $label;
+        $this->limit = self::LIMIT_DEFAULT;
+        $this->size = 0;
+        $this->start = $this->request->input('start') ?? 0;
     }
 
     /**
      * Display a listing of the resource.
      *
-     * @return Response
+     * @return JsonResponse
      */
     public function index()
     {
         $posts = null;
-        foreach ($this->blog->all() as $post) {
+        foreach ($this->blog->all()->slice($this->start, $this->limit) as $post) {
             $postLinks['href'] = $this->fullUrl . '/' . $post->id;
             $posts[] = [
                 "id" => $post->id,
@@ -64,23 +72,38 @@ class BlogController extends Controller
             ];
         }
 
+        $links = ['self' => $this->fullUrl];
         $message = "no posts found!";
-        if (count($posts) > 0) {
-            $message = "posts found";
+        try {
+            if (count($posts) > 0) {
+                $message = "posts found";
+            }
+        } catch (\Exception $e) {
+            $message .= ' start parameter set too high';
+            return response()->json([
+                "message" => $message,
+                "limit" => $this->limit,
+                "posts" => $posts,
+                "links" => $links,
+                "size" => 0,
+                "start" => $this->start,
+            ], 400);
         }
 
-        $links = ['self' => $this->fullUrl];
         return response()->json([
             "message" => $message,
+            "limit" => $this->limit,
             "posts" => $posts,
-            "links" => $links
+            "links" => $links,
+            "size" => count($posts),
+            "start" => $this->start,
         ], 200);
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @return Response
+     * @return JsonResponse
      */
     public function store()
     {
@@ -120,7 +143,8 @@ class BlogController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return Response
+     *
+     * @return JsonResponse
      */
     public function show($id)
     {
@@ -172,7 +196,7 @@ class BlogController extends Controller
      *
      * @param  int $id
      *
-     * @return Response
+     * @return JsonResponse
      */
     public function update($id)
     {
@@ -206,7 +230,7 @@ class BlogController extends Controller
      *
      * @param  int $id
      *
-     * @return Response
+     * @return JsonResponse
      */
     public function destroy($id)
     {
@@ -233,7 +257,7 @@ class BlogController extends Controller
      *
      * @param  int $id
      *
-     * @return Response
+     * @return JsonResponse
      */
     public function upload($id)
     {
@@ -274,7 +298,7 @@ class BlogController extends Controller
      * @param  int $id
      * @param      $upload_id
      *
-     * @return Response
+     * @return JsonResponse
      */
     public function remove($id, $upload_id)
     {
@@ -303,7 +327,7 @@ class BlogController extends Controller
      *
      * @param  int $id
      *
-     * @return Response
+     * @return JsonResponse
      */
     public function addLabel($id)
     {
@@ -334,7 +358,7 @@ class BlogController extends Controller
      * @param  int $id
      * @param      $label_id
      *
-     * @return Response
+     * @return JsonResponse
      */
     public function editLabel($id, $label_id)
     {
@@ -370,7 +394,7 @@ class BlogController extends Controller
      * @param  int $id
      * @param  int $label_id
      *
-     * @return Response
+     * @return JsonResponse
      */
     public function delLabel($id, $label_id)
     {
