@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Storage;
 
 class BlogController extends Controller
 {
-    const LIMIT_DEFAULT = 5;
+    const LIMIT_DEFAULT = 20;
 
     protected $request;
     protected $fullUrl;
@@ -49,7 +49,7 @@ class BlogController extends Controller
         $this->blog = $blog;
         $this->upload = $upload;
         $this->label = $label;
-        $this->limit = self::LIMIT_DEFAULT;
+        $this->limit = $this->request->input('limit') ?? self::LIMIT_DEFAULT;
         $this->size = 0;
         $this->start = $this->request->input('start') ?? 0;
     }

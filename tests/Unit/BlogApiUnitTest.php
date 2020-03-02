@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Blog;
 use App\Http\Controllers\BlogController;
+use Illuminate\Foundation\Testing\TestResponse;
 use stdClass;
 use Tests\TestCase;
 
@@ -11,6 +12,7 @@ class BlogApiUnitTest extends TestCase
 {
     protected $user;
     protected $post;
+    protected $limit;
 
     public function __construct($name = null, array $data = [], $dataName = '')
     {
@@ -24,6 +26,8 @@ class BlogApiUnitTest extends TestCase
         $this->post = new stdClass();
         $this->post->title = 'This is a title';
         $this->post->body = 'Some text that will form the body of the posted article';
+
+        $this->limit = BlogController::LIMIT_DEFAULT;
     }
 
     public function testCreateUser()
@@ -65,7 +69,7 @@ class BlogApiUnitTest extends TestCase
             ->assertStatus(200)
             ->assertExactJson([
                 'message' => 'posts found',
-                'limit' => BlogController::LIMIT_DEFAULT,
+                'limit' => $this->limit,
                 'posts' => [
                     [
                         'id' => 1,
@@ -109,22 +113,22 @@ class BlogApiUnitTest extends TestCase
     {
         $this->createUser();
         $this->authenticateUser();
-        $this->createManyPosts();
+        $this->createManyPosts(100);
 
         $response = $this->listPosts()
             ->assertStatus(200);
         $json = $response->json();
 
-        self::assertCount(5, $json['posts']);
+        self::assertCount($this->limit, $json['posts']);
 
         $response->assertJson([
-            'limit' => 5,
-            'size' => 5,
+            'limit' => $this->limit,
+            'size' => $this->limit,
             'start' => 0,
         ]);
     }
 
-    public function testPaginationHandlesStartURLParameter()
+    public function testPaginationHandlesStartParameter()
     {
         $this->createUser();
         $this->authenticateUser();
@@ -137,13 +141,13 @@ class BlogApiUnitTest extends TestCase
         self::assertCount(5, $json['posts']);
 
         $response->assertJson([
-            'limit' => 5,
+            'limit' => $this->limit,
             'size' => 5,
             'start' => 5,
         ]);
     }
 
-    public function testPaginationHandlesOutOfRangeStartURLParameter()
+    public function testPaginationHandlesOutOfRangeStartParameter()
     {
         $this->createUser();
         $this->authenticateUser();
@@ -156,9 +160,28 @@ class BlogApiUnitTest extends TestCase
         self::assertEquals(null, $json['posts']);
 
         $response->assertJson([
-            'limit' => 5,
+            'limit' => $this->limit,
             'size' => 0,
             'start' => 50,
+        ]);
+    }
+
+    public function testPaginationHandlesLimitParameter()
+    {
+        $this->createUser();
+        $this->authenticateUser();
+        $this->createManyPosts();
+
+        $response = $this->listPostsWithSetlimit(7)
+            ->assertStatus(200);
+        $json = $response->json();
+
+        self::assertCount(7, $json['posts']);
+
+        $response->assertJson([
+            'limit' => 7,
+            'size' => 7,
+            'start' => 0,
         ]);
     }
 
@@ -210,11 +233,21 @@ class BlogApiUnitTest extends TestCase
     /**
      * @param int $start
      *
-     * @return \Illuminate\Foundation\Testing\TestResponse
+     * @return TestResponse
      */
     private function listPostsWithSetStart(int $start)
     {
         return $this->get("http://localhost/api/v1/blog/?start={$start}");
+    }
+
+    /**
+     * @param int $limit
+     *
+     * @return TestResponse
+     */
+    private function listPostsWithSetlimit(int $limit)
+    {
+        return $this->get("http://localhost/api/v1/blog/?limit={$limit}");
     }
 
     private function listPost()
@@ -223,9 +256,12 @@ class BlogApiUnitTest extends TestCase
         return $this->get(route('blog.show', $data));
     }
 
-    private function createManyPosts():void
+    /**
+     * @param int $numOfPosts
+     */
+    private function createManyPosts(int $numOfPosts = 10):void
     {
-        for ($i=0; $i<10; $i++) {
+        for ($i=0; $i<$numOfPosts; $i++) {
             $post = new Blog();
             $post->user_id = 1;
             $post->title = $this->faker->sentence($nbWords = 3, $variableNbWords = true);
