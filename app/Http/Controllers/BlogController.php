@@ -445,7 +445,7 @@ class BlogController extends Controller
 
     public function getResponseFromCacheIfExists($key)
     {
-        if (!App::environment('testing') && $response = Redis::get($key)) {
+        if (!App::environment(['testing', 'staging']) && $response = Redis::get($key)) {
             return $response;
         }
 
@@ -454,7 +454,7 @@ class BlogController extends Controller
 
     public function saveResponseToCache(string $key, int $duration, $value)
     {
-        if (!App::environment('testing')) {
+        if (!App::environment(['testing', 'staging'])) {
             Redis::setex($key, $duration, $value);
         }
     }
