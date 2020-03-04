@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use App\Blog;
 use App\Upload;
 use App\Label;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Storage;
 
 class BlogController extends Controller
@@ -23,6 +25,7 @@ class BlogController extends Controller
     protected $limit;
     protected $size;
     protected $start;
+    protected $hasInput = false;
 
     /**
      * BlogController constructor.
@@ -52,6 +55,7 @@ class BlogController extends Controller
         $this->limit = $this->request->input('limit') ?? self::LIMIT_DEFAULT;
         $this->size = 0;
         $this->start = $this->request->input('start') ?? 0;
+        $this->hasInput = $this->request->has('limit') || $this->request->has('start');
     }
 
     /**
@@ -61,7 +65,14 @@ class BlogController extends Controller
      */
     public function index()
     {
+        if (!$this->hasInput && $response = $this->getResponseFromCacheIfExists('posts.all')) {
+            return response()->json(json_decode($response), 200);
+        }
+
         $posts = null;
+        $links = ['self' => $this->fullUrl];
+        $message = "no posts found!";
+
         foreach ($this->blog->all()->slice($this->start, $this->limit) as $post) {
             $postLinks['href'] = $this->fullUrl . '/' . $post->id;
             $posts[] = [
@@ -72,32 +83,31 @@ class BlogController extends Controller
             ];
         }
 
-        $links = ['self' => $this->fullUrl];
-        $message = "no posts found!";
-        try {
-            if (count($posts) > 0) {
-                $message = "posts found";
-            }
-        } catch (\Exception $e) {
-            $message .= ' start parameter set too high';
-            return response()->json([
-                "message" => $message,
-                "limit" => $this->limit,
-                "posts" => $posts,
-                "links" => $links,
-                "size" => 0,
-                "start" => $this->start,
-            ], 400);
-        }
-
-        return response()->json([
+        $response = [
             "message" => $message,
             "limit" => $this->limit,
             "posts" => $posts,
             "links" => $links,
-            "size" => count($posts),
+            "size" => 0,
             "start" => $this->start,
-        ], 200);
+            ];
+
+        try {
+            if (count($posts) > 0) {
+                $response['message'] = "posts found";
+            }
+        } catch (\Exception $e) {
+            $response['message'] .= ' start parameter set too high';
+            return response()->json($response, 400);
+        }
+
+        $response['size'] = count($posts);
+
+        if (!$this->hasInput) {
+            $this->saveResponseToCache('posts.all', 60 * 60 * 24, json_encode($response));
+        }
+
+        return response()->json($response, 200);
     }
 
     /**
@@ -148,6 +158,10 @@ class BlogController extends Controller
      */
     public function show($id)
     {
+        if ($response = $this->getResponseFromCacheIfExists('posts.'.$id)) {
+            return response()->json(json_decode($response), 200);
+        }
+
         $post = $this->blog->findOrFail($id);
         $uploads = $this->upload->all()->where('post_id', $id);
         $labels = $this->label->all()->where('post_id', $id);
@@ -183,11 +197,16 @@ class BlogController extends Controller
         ];
 
         $links['self'] = $this->fullUrl;
-        return response()->json([
+
+        $response = [
             "message" => "post found",
             "post" => $post,
             "links" => $links,
-        ], 200);
+        ];
+
+        $this->saveResponseToCache('posts.'.$id, 60 * 60 * 24, json_encode($response));
+
+        return response()->json($response, 200);
     }
 
 
@@ -420,6 +439,23 @@ class BlogController extends Controller
             return response()->json([
                 "message" => "the action is forbidden for this user",
             ], 403);
+        }
+    }
+
+
+    public function getResponseFromCacheIfExists($key)
+    {
+        if (!App::environment('testing') && $response = Redis::get($key)) {
+            return $response;
+        }
+
+        return null;
+    }
+
+    public function saveResponseToCache(string $key, int $duration, $value)
+    {
+        if (!App::environment('testing')) {
+            Redis::setex($key, $duration, $value);
         }
     }
 
