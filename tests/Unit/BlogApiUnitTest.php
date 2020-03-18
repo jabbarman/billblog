@@ -185,6 +185,25 @@ class BlogApiUnitTest extends TestCase
         ]);
     }
 
+    public function testUpdatePost()
+    {
+        $this->createUser();
+        $this->authenticateUser();
+
+        $this->createPost();
+
+        $this->updatePost()
+            ->assertStatus(200)
+            ->assertExactJson([
+                'message' => 'post edited',
+                'id' => 1,
+                'title' => $this->post->title . ' Updated',
+                'creator' => $this->user->name,
+                'user_id' => 1,
+                'links' => ['self' => 'http://localhost/api/v1/blog/1']
+            ]);
+    }
+
     private function createUser()
     {
         $data = [
@@ -268,5 +287,20 @@ class BlogApiUnitTest extends TestCase
             $post->body = $this->faker->paragraph($nbSentences = 3, $variableNbSentences = true);
             $post->save();
         }
+    }
+
+    private function updatePost()
+    {
+        $data = [
+            'title' => $this->post->title . ' Updated',
+            'body' => $this->post->body . ' Updated too!',
+        ];
+
+        $header = [
+            'Authorization' => 'Bearer '.$this->user->token,
+            'Accept' => 'application/json',
+        ];
+
+        return $this->patch("http://localhost/api/v1/blog/1/", $data, $header);
     }
 }
