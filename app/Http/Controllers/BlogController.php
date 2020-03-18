@@ -228,15 +228,19 @@ class BlogController extends Controller
 
             if ($post->save()) {
                 $links['self'] = $this->fullUrl;
-                return response()->json([
+                $response = [
                     "message" => "post edited",
                     "id" => $post->id,
                     "title" => $post->title,
                     "user_id" => $post->id,
                     "creator" => $post->user->name,
                     "links" => $links
-                ], 200);
-            };
+                ];
+
+                $this->removeKeyFromCache('posts.'.$id);
+                $this->removeKeyFromCache('posts.all');
+                return response()->json($response, 200);
+            }
         } else {
             return response()->json([
                 "message" => "the action is forbidden for this user",
@@ -456,6 +460,13 @@ class BlogController extends Controller
     {
         if (!App::environment(['testing', 'staging'])) {
             Redis::setex($key, $duration, $value);
+        }
+    }
+
+    public function removeKeyFromCache(string $key)
+    {
+        if (!App::environment(['testing', 'staging'])) {
+            Redis::del($key);
         }
     }
 
