@@ -13,6 +13,7 @@ class BlogApiUnitTest extends TestCase
     protected $user;
     protected $post;
     protected $limit;
+    protected $date;
 
     public function __construct($name = null, array $data = [], $dataName = '')
     {
@@ -28,6 +29,8 @@ class BlogApiUnitTest extends TestCase
         $this->post->body = 'Some text that will form the body of the posted article';
 
         $this->limit = BlogController::LIMIT_DEFAULT;
+
+        $this->date = new \DateTime('today');
     }
 
     public function testCreateUser()
@@ -74,7 +77,13 @@ class BlogApiUnitTest extends TestCase
                     [
                         'id' => 1,
                         'title' => $this->post->title,
+                        'body' => $this->post->body,
+                        'images' => null,
+                        'labels' => null,
+                        'user_id' => 1,
                         'creator' => $this->user->name,
+                        'created_at' => $this->date->format('Y-m-d'),
+                        'updated_at' => $this->date->format('Y-m-d'),
                         'links' => ['href' => 'http://localhost/api/v1/blog/1'],
                     ]
                 ],
@@ -204,6 +213,25 @@ class BlogApiUnitTest extends TestCase
             ]);
     }
 
+    public function testSearchPosts()
+    {
+        $this->createUser();
+        $this->authenticateUser();
+
+        $this->createManyPosts();
+
+        $this->updatePost()
+            ->assertStatus(200)
+            ->assertExactJson([
+                'message' => 'post edited',
+                'id' => 1,
+                'title' => $this->post->title . ' Updated',
+                'creator' => $this->user->name,
+                'user_id' => 1,
+                'links' => ['self' => 'http://localhost/api/v1/blog/1']
+            ]);
+    }
+
     private function createUser()
     {
         $data = [
@@ -289,7 +317,12 @@ class BlogApiUnitTest extends TestCase
         }
     }
 
-    private function updatePost()
+    /**
+     * @param int $id
+     *
+     * @return TestResponse
+     */
+    private function updatePost(int $id = 1)
     {
         $data = [
             'title' => $this->post->title . ' Updated',
@@ -301,6 +334,6 @@ class BlogApiUnitTest extends TestCase
             'Accept' => 'application/json',
         ];
 
-        return $this->patch("http://localhost/api/v1/blog/1/", $data, $header);
+        return $this->patch("http://localhost/api/v1/blog/$id/", $data, $header);
     }
 }

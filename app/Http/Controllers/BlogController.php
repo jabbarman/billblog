@@ -74,13 +74,9 @@ class BlogController extends Controller
         $message = "no posts found!";
 
         foreach ($this->blog->all()->slice($this->start, $this->limit) as $post) {
-            $postLinks['href'] = $this->fullUrl . '/' . $post->id;
-            $posts[] = [
-                "id" => $post->id,
-                "title" => $post->title,
-                "creator" => $post->user->name,
-                "links"=>$postLinks
-            ];
+            $postResponse = $this->getPostResponseFromId($post->id);
+            $postResponse['links'] = ['href' => $this->fullUrl . '/' . $post->id];
+            $posts[] = $postResponse;
         }
 
         $response = [
@@ -89,7 +85,7 @@ class BlogController extends Controller
             "posts" => $posts,
             "links" => $links,
             "size" => 0,
-            "start" => $this->start,
+            "start" => intval($this->start),
             ];
 
         try {
@@ -473,10 +469,10 @@ class BlogController extends Controller
             "body" => $post->body,
             "images" => $images,
             "labels" => $labels_list,
-            "user_id" => $post->user_id,
+            "user_id" => intval($post->user_id),
             "creator" => $post->user->name,
-            "created_at" => $post->created_at,
-            "updated_at" => $post->updated_at,
+            "created_at" => $post->created_at->format('Y-m-d'),
+            "updated_at" => $post->updated_at->format('Y-m-d'),
         ];
         return $post;
     }
