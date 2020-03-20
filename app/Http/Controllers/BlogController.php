@@ -162,39 +162,7 @@ class BlogController extends Controller
             return response()->json(json_decode($response), 200);
         }
 
-        $post = $this->blog->findOrFail($id);
-        $uploads = $this->upload->all()->where('post_id', $id);
-        $labels = $this->label->all()->where('post_id', $id);
-
-        $images = null;
-        foreach ($uploads as $upload) {
-            if ($path_parts = pathinfo($upload->path)) {
-                $images[] = [
-                    "id" => $upload->id,
-                    "href" => $this->url . "/storage/" . $path_parts['basename'],
-                ];
-            }
-        }
-
-        $labels_list = null;
-        foreach ($labels as $label) {
-            $labels_list[] = [
-                "id" => $label->id,
-                "name" => $label->name,
-            ];
-        }
-
-        $post = [
-            "id" => $post->id,
-            "title" => $post->title,
-            "body" => $post->body,
-            "images" => $images,
-            "labels" => $labels_list,
-            "user_id" => $post->user_id,
-            "creator" => $post->user->name,
-            "created_at" => $post->created_at,
-            "updated_at" => $post->updated_at,
-        ];
+        $post = $this->getPostResponseFromId($id);
 
         $links['self'] = $this->fullUrl;
 
@@ -468,6 +436,49 @@ class BlogController extends Controller
         if (!App::environment(['testing', 'staging'])) {
             Redis::del($key);
         }
+    }
+
+    /**
+     * @param $id
+     *
+     * @return array
+     */
+    protected function getPostResponseFromId($id): array
+    {
+        $post = $this->blog->findOrFail($id);
+        $uploads = $this->upload->all()->where('post_id', $id);
+        $labels = $this->label->all()->where('post_id', $id);
+
+        $images = null;
+        foreach ($uploads as $upload) {
+            if ($path_parts = pathinfo($upload->path)) {
+                $images[] = [
+                    "id" => $upload->id,
+                    "href" => $this->url . "/storage/" . $path_parts['basename'],
+                ];
+            }
+        }
+
+        $labels_list = null;
+        foreach ($labels as $label) {
+            $labels_list[] = [
+                "id" => $label->id,
+                "name" => $label->name,
+            ];
+        }
+
+        $post = [
+            "id" => $post->id,
+            "title" => $post->title,
+            "body" => $post->body,
+            "images" => $images,
+            "labels" => $labels_list,
+            "user_id" => $post->user_id,
+            "creator" => $post->user->name,
+            "created_at" => $post->created_at,
+            "updated_at" => $post->updated_at,
+        ];
+        return $post;
     }
 
 }
