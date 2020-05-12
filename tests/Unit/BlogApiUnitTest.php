@@ -213,23 +213,46 @@ class BlogApiUnitTest extends TestCase
             ]);
     }
 
-    public function testSearchPosts()
+    public function testSearchPostsFound()
     {
         $this->createUser();
         $this->authenticateUser();
 
         $this->createManyPosts();
 
-        $this->updatePost()
+        $this->updatePost();
+
+        $data = [
+            'title' => $this->post->title . ' Updated',
+            'body' => $this->post->body . ' Updated too!',
+        ];
+
+        $this->searchPosts($data)
             ->assertStatus(200)
             ->assertExactJson([
-                'message' => 'post edited',
+                'message' => 'post found',
                 'id' => 1,
                 'title' => $this->post->title . ' Updated',
                 'creator' => $this->user->name,
                 'user_id' => 1,
-                'links' => ['self' => 'http://localhost/api/v1/blog/1']
+                'links' => ['href' => 'http://localhost/api/v1/blog/1']
             ]);
+    }
+
+    public function testSearchPostsNotFound()
+    {
+        $this->createUser();
+        $this->authenticateUser();
+
+        $this->createManyPosts();
+
+        $data = [
+            'title' => 'flibble',
+            'body' => 'flobble',
+        ];
+
+        $this->searchPosts($data)
+            ->assertStatus(404);
     }
 
     private function createUser()
@@ -297,6 +320,9 @@ class BlogApiUnitTest extends TestCase
         return $this->get("http://localhost/api/v1/blog/?limit={$limit}");
     }
 
+    /**
+     * @return TestResponse
+     */
     private function listPost()
     {
         $data = [1];
@@ -335,5 +361,15 @@ class BlogApiUnitTest extends TestCase
         ];
 
         return $this->patch("http://localhost/api/v1/blog/$id/", $data, $header);
+    }
+
+    /**
+     * @param $data
+     *
+     * @return TestResponse
+     */
+    private function searchPosts($data)
+    {
+        return $this->get(route('blog.search', $data));
     }
 }

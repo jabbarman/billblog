@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\User;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -477,4 +478,25 @@ class BlogController extends Controller
         return $post;
     }
 
+    /**
+     * Simple Search
+     *
+     * @return JsonResponse
+     */
+    public function search()
+    {
+        $post = Blog::where('title', 'like', '%' . $this->request->title . '%')
+            ->orWhere('body', 'like', '%' . $this->request->body . '%')
+            ->firstOrFail();
+        $links['href'] = route('blog.show', ['id' => $post->id]);
+        $creator = User::find($post->user_id);
+        return response()->json([
+            'message' => 'post found',
+            'id' => $post->id,
+            'title' => $post->title,
+            'creator' => $creator->name,
+            'user_id' => (int) $post->user_id,
+            'links' => $links,
+        ], 200);
+    }
 }

@@ -23,6 +23,7 @@ Route::prefix('v1')->group(function () {
     Route::post('blog/{blog}/label', 'BlogController@addLabel');
     Route::post('blog/{blog}/label/{label}', 'BlogController@editLabel');
     Route::delete('blog/{blog}/label/{label}', 'BlogController@delLabel');
+    Route::get('search', 'BlogController@search')->name('blog.search');
 });
 
 
